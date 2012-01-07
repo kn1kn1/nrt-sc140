@@ -1,0 +1,23 @@
+{
+    "name": "nrt-sc140"
+  , "description": "non realtime sc140 sound file generator"
+  , "version": "0.0.1"
+  , "private": false
+  , "repository": {
+        "type": "git"
+      , "url": "http://github.com/kn1kn1/nrt-sc140.git"
+  }
+  , "licenses": {
+        "type": "MIT"
+      , "url": "http://github.com/kn1kn1/nrt-sc140/blob/master/README.md"
+  }
+  , "engines": {
+      "node":  ">=0.6.5"
+  }
+  , "dependencies": {
+      "express": "2.5.2"
+    , "jade": ">= 0.0.1"
+    , "socket.io": ">=0.8.7"
+    , "sc4node": ">=0.0.7"
+  }
+}
