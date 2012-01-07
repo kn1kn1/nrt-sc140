@@ -19,6 +19,7 @@ System Requirements
 
 ### Client Side
 Web browser which supports WebSocket
+
   - Safari
   - Chrome
   - Firefox

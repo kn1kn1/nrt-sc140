@@ -11,6 +11,7 @@ var express = require('express')
   , path = require('path')
   , crypto = require('crypto')
   , util = require('util')
+  , fs = require('fs')
 
 var app = module.exports = express.createServer();
 
@@ -40,6 +41,11 @@ app.get('/', routes.index);
 app.listen(3000);
 console.log("Express server listening on port %d in %s mode", 
   app.address().port, app.settings.env);
+
+var audioDir = path.join(process.cwd(), 'public', 'audio');
+if (!path.existsSync(audioDir)) {
+  fs.mkdirSync(audioDir);
+}
 
 var MAX_RECORDING_SEC = 30;
 
