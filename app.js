@@ -48,6 +48,8 @@ if (!path.existsSync(audioDir)) {
 }
 
 var MAX_RECORDING_SEC = 30;
+var SC_SEVER_STARTED_MSG = 'notification is on';
+var SC_SEVER_START_ERR_MSG = 'server failed to start';
 
 // Socket IO
 var io = sio.listen(app);
@@ -55,39 +57,32 @@ io.sockets.on('connection', function(socket) {
   util.debug('connection');
     
   var curFile;
-  var curDir = process.cwd();
-  var filenames = new Array();
-    
-  var sclang = new sc.Sclang('/usr/bin/', function (data) {
+  var generatedFiles = new Array();
+  var sclang;
+  var handler = function(data) {
     util.debug('sclang stdout: ' + data);
-    socket.emit('stdout', '' + data);
-  });
-  sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
-
-  // FIXME workaround.
-  var workaroundTmpFile;
-  do {
-    workaroundTmpFile = '/tmp/nrt-sc140-' + randomString() + '.aiff';
-  } while (path.existsSync(workaroundTmpFile));
-  filenames.push(workaroundTmpFile);
-  sclang.evaluate(
-    's.waitForBoot(s.prepareForRecord(\'' 
-    + workaroundTmpFile
-    + '\');s.record;s.stopRecording;);', 
-    false);
-  
+    var msg = '' + data;
+    if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
+      socket.emit('scserverstated');
+    } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
+    }
+    socket.emit('stdout', msg);
+  };
+  socket.emit('scserverstarting');
+  sclang = createSclang(handler, generatedFiles);
   var timeoutId;
   var intervalId;
+  
   socket.on('generate', function(msg) {
     util.debug('generate: ' + msg);
 
     var aiffFile;
     do {
       curFile = randomString();
-      aiffFile = path.join(curDir, 'public', 'audio', curFile + '.aiff');
+      aiffFile = path.join(audioDir, curFile + '.aiff');
       util.debug('aiffFile: ' + aiffFile);
     } while (path.existsSync(aiffFile));
-    //filenames.push(path.join(curDir, 'public', 'audio', curFile + '.*'));
+    //generatedFiles.push(path.join(audioDir, curFile + '.*'));
     sclang.evaluate(
       's.waitForBoot(s.prepareForRecord(\'' 
       + aiffFile + '\');s.record;' 
@@ -95,7 +90,7 @@ io.sockets.on('connection', function(socket) {
 
     var timeRemaining = MAX_RECORDING_SEC + 1;
     timeoutId = setTimeout(function() {
-      timeoutId = stopRecording(sclang, socket, curDir, curFile);
+      timeoutId = stopRecording(sclang, socket, audioDir, curFile);
     }, timeRemaining * 1000);
 
     var timeRecorded = 0;
@@ -113,7 +108,7 @@ io.sockets.on('connection', function(socket) {
     util.debug('stop');
     if (timeoutId) clearTimeout(timeoutId);
     if (intervalId) clearInterval(intervalId);
-    timeoutId = stopRecording(sclang, socket, curDir, curFile);
+    timeoutId = stopRecording(sclang, socket, audioDir, curFile);
   });
 
   socket.on('disconnect', function() {
@@ -123,28 +118,45 @@ io.sockets.on('connection', function(socket) {
     
     sclang.dispose();
     
-    for (i in filenames) {
-      rmFile(filenames[i]);
+    for (i in generatedFiles) {
+      rmFile(generatedFiles[i]);
     }
   });
 });
 
+function createSclang(handler, generatedFiles) {
+  var sclang = new sc.Sclang('/usr/bin/', handler);
+  sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
 
-function randomString() {
-    var buf = crypto.randomBytes(4);
-    var rand = '';
-    for (var i = 0, len = buf.length; i < len; i++) {
-      rand = rand + buf[i];
-    }
-    return rand;
+  // FIXME workaround.
+  var workaroundTmpFile;
+  do {
+    workaroundTmpFile = '/tmp/nrt-sc140-' + randomString() + '.aiff';
+  } while (path.existsSync(workaroundTmpFile));
+  generatedFiles.push(workaroundTmpFile);
+  sclang.evaluate(
+    's.waitForBoot(s.prepareForRecord(\'' 
+    + workaroundTmpFile
+    + '\');s.record;s.stopRecording;);', 
+    false);
+  return sclang;
 }
 
-function stopRecording(sclang, socket, curDir, filename) {
+function randomString() {
+  var buf = crypto.randomBytes(4);
+  var rand = '';
+  for (var i = 0, len = buf.length; i < len; i++) {
+    rand = rand + buf[i];
+  }
+  return rand;
+}
+
+function stopRecording(sclang, socket, audioDir, filename) {
   sclang.evaluate('s.stopRecording;', false);
   sclang.stopSound();
   var timeoutId = setTimeout(function() {
-    var aiffFile = path.join(curDir, 'public', 'audio', filename + '.aiff');
-    var mp3File = path.join(curDir, 'public', 'audio', filename + '.mp3');
+    var aiffFile = path.join(audioDir, filename + '.aiff');
+    var mp3File = path.join(audioDir, filename + '.mp3');
     convert(aiffFile, mp3File, function(error, stdout, stderr) {
       util.debug('stdout: ' + stdout);
       util.debug('stderr: ' + stderr);

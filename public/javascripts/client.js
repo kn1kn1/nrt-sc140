@@ -33,6 +33,8 @@ audiojs.events.ready(function() {
 var socket = io.connect();
 socket.on('connect', onOpenWebSocket);
 socket.on('stdout', onReceiveStdout);
+socket.on('scserverstating', onScServerStating);
+socket.on('scserverstated', onScServerStated);
 socket.on('notification', onReceiveNotification);
 socket.on('timerecorded', onReceiveTimeRecorded);
 socket.on('filegenerated', onFileGenerated);
@@ -48,16 +50,20 @@ function onCloseWebSocket() {
 
 function onReceiveStdout(msg) {
   appendOutput(msg);
-  if (!scServerStarted) {
-    if (msg.indexOf('notification is on') != -1) {
-      $('#generate').attr('disabled', false);
-      scServerStarted = true;
-    }
-  } 
+}
+
+function onScServerStating() {
+  scServerStarted = false;
+  $('#generate').attr('disabled', true);
+}
+
+function onScServerStated() {
+  scServerStarted = true;
+  $('#generate').attr('disabled', false);
 }
 
 function onReceiveNotification(msg) {
-   notify(msg)
+  notification(msg)
 }
 
 function onReceiveTimeRecorded(msg) {
