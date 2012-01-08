@@ -55,6 +55,10 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
   
   NrtSc140.prototype.onGenerate = function(msg) {
     util.debug('generate: ' + msg);
+    if (msg.indexOf('unixCmd') != -1) {
+      _socket.emit('notification', '\'unixCmd\' can not be executed.');
+      return;
+    }
 
     var aiffFile;
     do {

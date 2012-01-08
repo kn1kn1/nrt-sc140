@@ -17,11 +17,10 @@ $(document).ready(function(){
     }
   });
   $('#codetitle').text('code (' + $('#code').val().length + ' <= 140)');
-  $('#generate').attr('disabled', true);
   $('#generate').click(onGenerateClick);
-  $('#stop').hide();
   $('#stop').click(onStopClick);
   $('#stdout').attr('disabled', true);
+  editmode();
 });
 
 // audio.js
@@ -39,6 +38,20 @@ socket.on('notification', onReceiveNotification);
 socket.on('timerecorded', onReceiveTimeRecorded);
 socket.on('filegenerated', onFileGenerated);
 socket.on('disconnect', onCloseWebSocket);
+
+function editmode() {
+  $('#code').attr('disabled', false);
+  $('#generate').show();
+  $('#stop').hide();
+  $('#stop').attr('disabled', false);
+}
+
+function generatemode() {
+  $('#code').attr('disabled', true);
+  $('#generate').hide();
+  $('#stop').attr('disabled', false);
+  $('#stop').show();
+}
 
 function onOpenWebSocket() {
   appendOutput('WebSocket connected' + '\n');
@@ -63,6 +76,7 @@ function onScServerStarted() {
 }
 
 function onReceiveNotification(msg) {
+  editmode();
   notification(msg)
 }
 
@@ -83,10 +97,7 @@ function onFileGenerated(msg) {
   $('<a></a>').text('aiff').attr('href', aiff).appendTo('#player');
   audiojs.createAll();  // refresh player
 
-  $('#code').attr('disabled', false);
-  $('#generate').show();
-  $('#stop').hide();
-  $('#stop').attr('disabled', false);
+  editmode();
 }
 
 function onGenerateClick() {
@@ -97,10 +108,7 @@ function onGenerateClick() {
     notification('code can not be over 140.');
     return;
   }
-  $('#code').attr('disabled', true);
-  $('#generate').hide();
-  $('#stop').attr('disabled', false);
-  $('#stop').show();
+  generatemode();
   socket.emit('generate', code);
 }
 
