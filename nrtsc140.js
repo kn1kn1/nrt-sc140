@@ -1,3 +1,6 @@
+/**
+ * Constants.
+ */
 const MAX_RECORDING_SEC = 30;
 const SC_SEVER_STARTED_MSG = 'notification is on';
 const SC_SEVER_START_ERR_MSG = 'server failed to start';
@@ -20,24 +23,31 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
   var _timeoutId = null;
   var _intervalId = null;
   var _sclang = null;
+  var _handler = function(data) {
+    util.debug('sclang stdout: ' + data);
+    var msg = '' + data;
+    if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
+      _socket.emit('scserverstarted');
+    } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
+    }
+    _socket.emit('stdout', msg);
+  };
   
   NrtSc140.prototype.start = function() {
     _socket.emit('scserverstarting');
-    var handler = function(data) {
-      util.debug('sclang stdout: ' + data);
-      var msg = '' + data;
-      if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
-        _socket.emit('scserverstated');
-      } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
-      }
-      _socket.emit('stdout', msg);
-    };
-    _sclang = createSclang(handler, _generatedFiles);
+    _sclang = createSclang(_handler, _generatedFiles);
     _socket.on('generate', this.onGenerate);
     _socket.on('stop', this.onStop);
+    _socket.on('restartsclang', this.onRestartSclang);
     _socket.on('disconnect', this.onSocketDisconnect);
   }
     
+  NrtSc140.prototype.onRestartSclang = function() {
+    _socket.emit('scserverstarting');
+    _sclang.dispose();
+    _sclang = createSclang(_handler, _generatedFiles);
+  }
+  
   NrtSc140.prototype.onGenerate = function(msg) {
     util.debug('generate: ' + msg);
 
@@ -65,7 +75,7 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
       timeRecorded++;
       util.debug('timerecorded: ' + timeRecorded);
       _socket.emit('timerecorded', '' + timeRecorded);
-      if (timeRecorded == MAX_RECORDING_SEC) clearInterval(_intervalId);
+      if (timeRecorded >= MAX_RECORDING_SEC) clearInterval(_intervalId);
     }, 1000);
   };
 

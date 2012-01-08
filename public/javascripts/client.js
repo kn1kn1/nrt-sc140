@@ -33,8 +33,8 @@ audiojs.events.ready(function() {
 var socket = io.connect();
 socket.on('connect', onOpenWebSocket);
 socket.on('stdout', onReceiveStdout);
-socket.on('scserverstating', onScServerStating);
-socket.on('scserverstated', onScServerStated);
+socket.on('scserverstarting', onScServerStarting);
+socket.on('scserverstarted', onScServerStarted);
 socket.on('notification', onReceiveNotification);
 socket.on('timerecorded', onReceiveTimeRecorded);
 socket.on('filegenerated', onFileGenerated);
@@ -52,12 +52,12 @@ function onReceiveStdout(msg) {
   appendOutput(msg);
 }
 
-function onScServerStating() {
+function onScServerStarting() {
   scServerStarted = false;
   $('#generate').attr('disabled', true);
 }
 
-function onScServerStated() {
+function onScServerStarted() {
   scServerStarted = true;
   $('#generate').attr('disabled', false);
 }
@@ -73,6 +73,8 @@ function onReceiveTimeRecorded(msg) {
 }
 
 function onFileGenerated(msg) {
+  socket.emit('restartsclang');
+
   $('#player').empty();
   var mp3 ='/audio/' + msg + '.mp3';
   var aiff ='/audio/' + msg + '.aiff';
