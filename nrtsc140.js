@@ -4,6 +4,7 @@
 const MAX_RECORDING_SEC = 30;
 const SC_SEVER_STARTED_MSG = 'notification is on';
 const SC_SEVER_START_ERR_MSG = 'server failed to start';
+const JACK_DRIVER_IGNORE_MSG = 'JackDriver: max output latency';
 
 /**
  * Module dependencies.
@@ -23,19 +24,23 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
   var _timeoutId = null;
   var _intervalId = null;
   var _sclang = null;
-  var _handler = function(data) {
+  var _sclangStdoutHandler = function(data) {
     util.debug('sclang stdout: ' + data);
     var msg = '' + data;
     if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
       _socket.emit('scserverstarted');
     } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
+    } else if (msg.indexOf(JACK_DRIVER_IGNORE_MSG) != -1) {
+      // FIXME workaround
+      // in case other user start sclang
+      return; // ignore
     }
     _socket.emit('stdout', msg);
   };
   
   NrtSc140.prototype.start = function() {
     _socket.emit('scserverstarting');
-    _sclang = createSclang(_handler, _generatedFiles);
+    _sclang = createSclang(_sclangStdoutHandler, _generatedFiles);
     _socket.on('generate', this.onGenerate);
     _socket.on('stop', this.onStop);
     _socket.on('restartsclang', this.onRestartSclang);
@@ -45,7 +50,7 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
   NrtSc140.prototype.onRestartSclang = function() {
     _socket.emit('scserverstarting');
     _sclang.dispose();
-    _sclang = createSclang(_handler, _generatedFiles);
+    _sclang = createSclang(_sclangStdoutHandler, _generatedFiles);
   }
   
   NrtSc140.prototype.onGenerate = function(msg) {
@@ -103,7 +108,7 @@ function createSclang(handler, generatedFiles) {
   var sclang = new sc.Sclang('/usr/bin/', handler);
   sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
 
-  // FIXME workaround.
+  // FIXME workaround
   var workaroundTmpFile;
   do {
     workaroundTmpFile = '/tmp/nrt-sc140-' + randomString() + '.aiff';
@@ -115,15 +120,6 @@ function createSclang(handler, generatedFiles) {
     + '\');s.record;s.stopRecording;);', 
     false);
   return sclang;
-}
-
-function randomString() {
-  var buf = crypto.randomBytes(4);
-  var rand = '';
-  for (var i = 0, len = buf.length; i < len; i++) {
-    rand = rand + buf[i];
-  }
-  return rand;
 }
 
 function stopRecording(sclang, socket, audioDir, filename) {
@@ -142,6 +138,15 @@ function stopRecording(sclang, socket, audioDir, filename) {
     });
   }, 1000);
   return timeoutId;
+}
+
+function randomString() {
+  var buf = crypto.randomBytes(4);
+  var rand = '';
+  for (var i = 0, len = buf.length; i < len; i++) {
+    rand = rand + buf[i];
+  }
+  return rand;
 }
 
 function convert(aiffFile, mp3File, callback) {
