@@ -41,6 +41,7 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
   NrtSc140.prototype.start = function() {
     _socket.emit('scserverstarting');
     _sclang = createSclang(_sclangStdoutHandler, _generatedFiles);
+    _socket.on('validate', this.onValidate);
     _socket.on('generate', this.onGenerate);
     _socket.on('stop', this.onStop);
     _socket.on('restartsclang', this.onRestartSclang);
@@ -53,12 +54,14 @@ var NrtSc140 = exports.NrtSc140 = function(socket) {
     _sclang = createSclang(_sclangStdoutHandler, _generatedFiles);
   }
   
+  NrtSc140.prototype.onValidate = function(msg) {
+    util.debug('validate: ' + msg);
+    validateScCode(msg, _socket);
+  }
+
   NrtSc140.prototype.onGenerate = function(msg) {
     util.debug('generate: ' + msg);
-    if (msg.indexOf('unixCmd') != -1) {
-      _socket.emit('notification', '\'unixCmd\' can not be executed.');
-      return;
-    }
+    if (!validateScCode(msg, _socket)) return;
 
     var aiffFile;
     do {
@@ -124,6 +127,23 @@ function createSclang(handler, generatedFiles) {
     + '\');s.record;s.stopRecording;);', 
     false);
   return sclang;
+}
+
+function validateScCode(msg, socket) {
+    if (msg.length < 1) {
+      socket.emit('validationerror', 'code can not be blank.');
+      return false;
+    }
+    if (msg.length > 140) {
+      socket.emit('validationerror', 'code can not be over 140.');
+      return false;
+    }
+    if (msg.indexOf('unixCmd') != -1) {
+      socket.emit('validationerror', '\'unixCmd\' can not be executed.');
+      return false;
+    }
+    socket.emit('validationerror', '');
+    return true;
 }
 
 function stopRecording(sclang, socket, audioDir, filename) {

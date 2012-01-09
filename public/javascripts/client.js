@@ -1,28 +1,3 @@
-var scServerStarted = false;
-
-$(document).ready(function(){
-  var code = 
-    '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
-  $('#code').text(code);
-  $('#code').focus();
-  $('#code').keyup(function() {
-    var count = $('#code').val().length;
-    $('#codetitle').text('code (' + count + ' <= 140)');
-    if (count > 140) {
-      notification('code can not be over 140.');
-      $('#generate').attr('disabled', true);
-    } else {
-      clearNotification();
-      $('#generate').attr('disabled', !scServerStarted);
-    }
-  });
-  $('#codetitle').text('code (' + $('#code').val().length + ' <= 140)');
-  $('#generate').click(onGenerateClick);
-  $('#stop').click(onStopClick);
-  $('#stdout').attr('disabled', true);
-  editmode();
-});
-
 // audio.js
 audiojs.events.ready(function() {
   audiojs.createAll();
@@ -34,10 +9,24 @@ socket.on('connect', onOpenWebSocket);
 socket.on('stdout', onReceiveStdout);
 socket.on('scserverstarting', onScServerStarting);
 socket.on('scserverstarted', onScServerStarted);
-socket.on('notification', onReceiveNotification);
+socket.on('validationerror', onValidationError);
 socket.on('timerecorded', onReceiveTimeRecorded);
 socket.on('filegenerated', onFileGenerated);
 socket.on('disconnect', onCloseWebSocket);
+
+var scServerStarted = false;
+$(document).ready(function(){
+  var code = 
+    '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
+  $('#code').text(code);
+  $('#code').focus();
+  $('#code').keyup(onCodeChanged);
+  setCodeCount($('#code').val().length)
+  $('#generate').click(onGenerateClick);
+  $('#stop').click(onStopClick);
+  $('#stdout').attr('disabled', true);
+  editmode();
+});
 
 function editmode() {
   $('#code').attr('disabled', false);
@@ -75,9 +64,33 @@ function onScServerStarted() {
   $('#generate').attr('disabled', false);
 }
 
-function onReceiveNotification(msg) {
-  editmode();
-  notification(msg)
+function onCodeChanged() {
+  var code = $.trim($('#code').val());
+  setCodeCount(code.length)
+  socket.emit('validate', code);
+}
+
+function onValidationError(msg) {
+  if (msg.length == 0) {
+    clearValidationError();
+    $('#generate').attr('disabled', !scServerStarted);
+  } else {
+    editmode();
+    validationError(msg)
+    $('#generate').attr('disabled', true);
+  }
+}
+
+function onGenerateClick() {
+  clearValidationError();
+  var code = $.trim($('#code').val());
+  generatemode();
+  socket.emit('generate', code);
+}
+
+function onStopClick() {
+  $('#stop').attr('disabled', true);
+  socket.emit('stop');
 }
 
 function onReceiveTimeRecorded(msg) {
@@ -100,21 +113,8 @@ function onFileGenerated(msg) {
   editmode();
 }
 
-function onGenerateClick() {
-  clearNotification();
-  var code = $('#code').val();
-  if (code == '') return;
-  if (code.length > 140) {
-    notification('code can not be over 140.');
-    return;
-  }
-  generatemode();
-  socket.emit('generate', code);
-}
-
-function onStopClick() {
-  $('#stop').attr('disabled', true);
-  socket.emit('stop');
+function setCodeCount(count) {
+  $('#codetitle').text('code (' + count + ' <= 140)');
 }
 
 function appendOutput(msg) {
@@ -126,10 +126,10 @@ function setOutput(msg) {
   $('#stdout').attr('scrollTop', $('#stdout').attr('scrollHeight'))
 }
 
-function clearNotification() {
-  $('#notification').hide();
+function clearValidationError() {
+  $('#validationerror').hide();
 }
 
-function notification(msg) {
-  $('#notification').hide().text(msg).show();
+function validationError(msg) {
+  $('#validationerror').hide().text(msg).show();
 }
