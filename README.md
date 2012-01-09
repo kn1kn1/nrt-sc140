@@ -1,7 +1,7 @@
 nrt-sc140
 =========
 
-non realtime sc-140 sound file generatior web application
+non-realtime sc140 sound file generatior web application
 
 System Requirements
 -------------------
