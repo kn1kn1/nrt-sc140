@@ -37,11 +37,7 @@ NrtSc140.prototype.start = function() {
 };
 
 NrtSc140.prototype.onRestartSclang = function() {
-  this._socket.emit('scserverstarting');
-  if (this._sclang) {
-    this._sclang.dispose();
-  }
-  this._sclang = this.createSclang();
+  this.restartSclang();
 };
 
 NrtSc140.prototype.onValidate = function(msg) {
@@ -132,12 +128,29 @@ NrtSc140.prototype.createSclang = function() {
   return sclang;
 };
 
+NrtSc140.prototype.restartSclang = function() {
+  this._socket.emit('scserverstarting');
+  if (this._sclang) {
+    this._sclang.dispose();
+  }
+  this._sclang = this.createSclang();    
+};
+
 NrtSc140.prototype.onSclangStdoutReceived = function(data) {
   util.debug('sclang stdout: ' + data);
   var msg = '' + data;
   if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
     this._socket.emit('scserverstarted');
   } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
+    // FIXME workaround
+    // in case starting server failed (receive following stdout).
+    //  ERROR:
+    //  server failed to start
+    //  ERROR:
+    //  server failed to start
+    this._socket.emit('stdout', msg);
+    this.restartSclang(); // restart sclang
+    return;
   } else if (msg.indexOf(JACK_DRIVER_IGNORE_MSG) != -1) {
     // FIXME workaround
     // in case other user start sclang
