@@ -1,135 +1,325 @@
-// audio.js
-audiojs.events.ready(function() {
-  audiojs.createAll();
-});
+(function () {
+  "use strict";
+  var socket,
+    code,
+    generateButton,
+    stopButton,
+    stdout,
+    audioPlayer,
+    validationErr,
+    mediator;
 
-// socket.io specific code
-var socket = io.connect();
-socket.on('connect', onOpenWebSocket);
-socket.on('stdout', onReceiveStdout);
-socket.on('scserverstarting', onScServerStarting);
-socket.on('scserverstarted', onScServerStarted);
-socket.on('validationerror', onValidationError);
-socket.on('timerecorded', onReceiveTimeRecorded);
-socket.on('filegenerated', onFileGenerated);
-socket.on('disconnect', onCloseWebSocket);
+  // audio.js
+  audiojs.events.ready(function () {
+    audiojs.createAll();
+  });
 
-var scServerStarted = false;
-$(document).ready(function(){
-  var code = 
-    '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
-  $('#code').text(code);
-  $('#code').focus();
-  $('#code').keyup(onCodeChanged);
-  setCodeCount($('#code').val().length)
-  $('#generate').click(onGenerateClick);
-  $('#stop').click(onStopClick);
-  $('#stdout').attr('disabled', true);
-  editmode();
-});
+  socket = {
+    setup: function () {
+      this._sock = io.connect();
+      this._sock.on('connect', this._onOpenWebSocket);
+      this._sock.on('stdout', this._onReceiveStdout);
+      this._sock.on('scserverstarting', this._onScServerStarting);
+      this._sock.on('scserverstarted', this._onScServerStarted);
+      this._sock.on('validationerror', this._onValidationError);
+      this._sock.on('timerecorded', this._onReceiveTimeRecorded);
+      this._sock.on('filegenerated', this._onFileGenerated);
+      this._sock.on('disconnect', this._onCloseWebSocket);
+      return this;
+    },
 
-function editmode() {
-  $('#code').attr('disabled', false);
-  $('#generate').show();
-  $('#stop').hide();
-  $('#stop').attr('disabled', false);
-}
+    emit: function () {
+      this._sock.emit.apply(this._sock, arguments);
+    },
 
-function generatemode() {
-  $('#code').attr('disabled', true);
-  $('#generate').hide();
-  $('#stop').attr('disabled', false);
-  $('#stop').show();
-}
+    _onOpenWebSocket: function () {
+      mediator.appendStdout('WebSocket connected' + '\n');
+    },
 
-function onOpenWebSocket() {
-  appendOutput('WebSocket connected' + '\n');
-}
+    _onCloseWebSocket: function () {
+      mediator.appendStdout('WebSocket disconnected');
+    },
 
-function onCloseWebSocket() {
-  appendOutput('WebSocket disconnected');
-}
+    _onReceiveStdout: function (msg) {
+      mediator.appendStdout(msg);
+    },
 
-function onReceiveStdout(msg) {
-  appendOutput(msg);
-}
+    _onScServerStarting: function () {
+      mediator.setScServerStarted(false);
+    },
 
-function onScServerStarting() {
-  scServerStarted = false;
-  $('#generate').attr('disabled', true);
-}
+    _onScServerStarted: function () {
+      mediator.setScServerStarted(true);
+    },
 
-function onScServerStarted() {
-  scServerStarted = true;
-  $('#generate').attr('disabled', false);
-}
+    _onValidationError: function (msg) {
+      if (msg) {
+        mediator.validationError(msg);
+      } else {
+        mediator.clearValidationError();
+      }
+    },
 
-function onCodeChanged() {
-  var code = $.trim($('#code').val());
-  setCodeCount(code.length)
-  socket.emit('validate', code);
-}
+    _onReceiveTimeRecorded: function (msg) {
+      mediator.setRecordedTimeText(msg);
+    },
 
-function onValidationError(msg) {
-  if (msg.length == 0) {
-    clearValidationError();
-    $('#generate').attr('disabled', !scServerStarted);
-  } else {
-    editmode();
-    validationError(msg)
-    $('#generate').attr('disabled', true);
-  }
-}
+    _onFileGenerated: function (msg) {
+      mediator.socketEmit('restartsclang');
+      mediator.showPlayer(msg);
+      mediator.setEditmode();
+    }
+  }.setup();
 
-function onGenerateClick() {
-  clearValidationError();
-  var code = $.trim($('#code').val());
-  generatemode();
-  socket.emit('generate', code);
-}
+  code = {
+    setup: function (initialCode) {
+      this._textarea = $('#code');
+      this._title = $('#codetitle');
 
-function onStopClick() {
-  $('#stop').attr('disabled', true);
-  socket.emit('stop');
-}
+      var textarea = this._textarea;
+      var thisObj = this;
+      textarea.focus();
+      textarea.keyup(function () {
+        thisObj._onCodeChanged.apply(thisObj);
+      });
 
-function onReceiveTimeRecorded(msg) {
-  $('#player').empty();
-  $('<div></div>').text(msg + ' sec recorded (Max: 30 sec)').appendTo('#player');
-  audiojs.createAll();  // refresh player
-}
+      if (initialCode) {
+        this.setText(initialCode);
+      }
+      return this;
+    },
 
-function onFileGenerated(msg) {
-  socket.emit('restartsclang');
+    disable: function (b) {
+      this._textarea.attr('disabled', b ? true : false);
+    },
 
-  $('#player').empty();
-  var mp3 ='/audio/' + msg + '.mp3';
-  var aiff ='/audio/' + msg + '.aiff';
-  $('<audio></audio>').attr('src', mp3).appendTo('#player');
-  $('<a></a>').text('mp3').attr('href', mp3).appendTo('#player');
-  $('<a></a>').text('aiff').attr('href', aiff).appendTo('#player');
-  audiojs.createAll();  // refresh player
+    setText: function (text) {
+      this._textarea.text(text);
+      this._onCodeChanged();
+    },
 
-  editmode();
-}
+    _onCodeChanged: function () {
+      var val = this.val();
+      this.setCodeCountText(val.length);
+      mediator.socketEmit('validate', val);
+    },
 
-function setCodeCount(count) {
-  $('#codetitle').text('code (' + count + ' <= 140)');
-}
+    val: function () {
+      return $.trim(this._textarea.val());
+    },
 
-function appendOutput(msg) {
-  setOutput($('#stdout').val() + msg);
-}
+    setCodeCountText: function (count) {
+      this._title.text('code (' + count + ' <= 140)');
+    }
+  };
 
-function setOutput(msg) {
-  $('#stdout').text(msg);
-  $('#stdout').attr('scrollTop', $('#stdout').attr('scrollHeight'))
-}
+  generateButton = {
+    setup: function () {
+      this._button = $('#generate');
+      this._button.click(this._onGenerateClick);
+      return this;
+    },
 
-function clearValidationError() {
-  $('#validationerror').hide();
-}
+    _onGenerateClick: function () {
+      mediator.clearValidationError();
+      mediator.setGeneratemode();
+      mediator.socketEmit('generate', code.val());
+    },
 
-function validationError(msg) {
-  $('#validationerror').hide().text(msg).show();
-}
+    disable: function (b) {
+      this._button.attr('disabled', b ? true : false);
+    },
+
+    show: function () {
+      this._button.show.apply(this._button, arguments);
+    },
+
+    hide: function () {
+      this._button.hide.apply(this._button, arguments);
+    }
+  };
+
+  stopButton = {
+    setup: function () {
+      var thisObj = this;
+      this._button = $('#stop');
+      this._button.click(function () {
+        thisObj._onStopClick.apply(thisObj);
+      });
+      return this;
+    },
+
+    _onStopClick: function () {
+      this.disable(true);
+      mediator.socketEmit('stop');
+    },
+
+    disable: function (b) {
+      this._button.attr('disabled', b ? true : false);
+    },
+
+    show: function () {
+      this.disable(false);
+      this._button.show.apply(this._button, arguments);
+    },
+
+    hide: function () {
+      this._button.hide.apply(this._button, arguments);
+    }
+  };
+
+  stdout = {
+    setup: function () {
+      this._textarea = $('#stdout');
+      this._textarea.attr('disabled', true);
+      return this;
+    },
+
+    appendText: function (msg) {
+      this.setText(this._textarea.val() + msg);
+    },
+
+    setText: function (msg) {
+      var textarea = this._textarea;
+      textarea.text(msg);
+      textarea.attr('scrollTop', textarea.attr('scrollHeight'));
+    }
+  };
+
+  audioPlayer = {
+    setup: function () {
+      this._div = $('#player');
+      return this;
+    },
+
+    setRecordedTimeText: function (sec) {
+      this._div.empty();
+
+      var myhtml = '<div>' + sec + ' sec recorded (Max: 30 sec)' + '</div>';
+      this._div.html(myhtml);
+
+      this.refreshAudiojsPlayer();
+    },
+
+    showPlayer: function (filename) {
+      this._div.empty();
+
+      var mp3 = '/audio/' + filename + '.mp3';
+      var aiff = '/audio/' + filename + '.aiff';
+      var myhtml = '<audio src=\"' + mp3 + '\"></audio>' +
+        '<a href=\"' + mp3 + '\">mp3</a>' +
+        '<a href=\"' + aiff + '\">aiff</a>';
+      this._div.html(myhtml);
+
+      this.refreshAudiojsPlayer();
+    },
+
+    refreshAudiojsPlayer: function () {
+      audiojs.createAll();
+    }
+  };
+
+  validationErr = {
+    setup: function () {
+      this._hasErr = false;
+      this._div = $('#validationerror');
+      return this;
+    },
+
+    clear: function () {
+      this._div.hide();
+      this._hasErr = false;
+    },
+
+    show: function (msg) {
+      this._div.hide().text(msg).show();
+      this._hasErr = true;
+    }
+  };
+
+  mediator = {
+    _scServerStarted: false,
+    _socket: socket,
+    _code: code,
+    _generateButton: generateButton,
+    _stopButton: stopButton,
+    _stdout: stdout,
+    _audioPlayer: audioPlayer,
+    _validationErr: validationErr,
+
+    setup: function () {
+      this._code.setup();
+      this._generateButton.setup();
+      this._stopButton.setup();
+      this._stdout.setup();
+      this._audioPlayer.setup();
+      this._validationErr.setup();
+    },
+
+    setScServerStarted: function (b) {
+      this._scServerStarted = b ? true : false;
+      this.refreshGenerateButtonStatus();
+    },
+
+    socketEmit: function () {
+      this._socket.emit.apply(this._socket, arguments);
+    },
+
+    setCodeText: function (text) {
+      this._code.setText(text);
+    },
+
+    appendStdout: function (text) {
+      this._stdout.appendText(text);
+    },
+
+    refreshGenerateButtonStatus: function () {
+      if (this._validationErr.hasErr) {
+        this._generateButton.disable(true);
+        return;
+      }
+      this._generateButton.disable(this._scServerStarted ? false : true);
+    },
+
+    setRecordedTimeText: function (sec) {
+      this._audioPlayer.setRecordedTimeText(sec);
+    },
+
+    showPlayer: function (filename) {
+      this._audioPlayer.showPlayer(filename);
+    },
+
+    clearValidationError: function () {
+      this._validationErr.clear();
+      this.refreshGenerateButtonStatus();
+    },
+
+    validationError: function (msg) {
+      this.setEditmode();
+      this._validationErr.show(msg);
+      this.refreshGenerateButtonStatus();
+    },
+
+    setEditmode: function () {
+      this._code.disable(false);
+      this._generateButton.show();
+      this._stopButton.hide();
+    },
+
+    setGeneratemode: function () {
+      this._code.disable(true);
+      this._generateButton.hide();
+      this._stopButton.show();
+    }
+  };
+
+  $(document).ready(function () {
+    var INITIAL_CODE =
+      '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
+    mediator.setup();
+    mediator.setCodeText(INITIAL_CODE);
+    mediator.setEditmode();
+  });
+
+}());
+
