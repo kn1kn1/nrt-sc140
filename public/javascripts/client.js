@@ -228,6 +228,10 @@
       return this;
     },
 
+    hasErr: function () {
+      return this._hasErr;
+    },
+
     clear: function () {
       this._div.hide();
       this._hasErr = false;
@@ -276,7 +280,7 @@
     },
 
     refreshGenerateButtonStatus: function () {
-      if (this._validationErr.hasErr) {
+      if (this._validationErr.hasErr()) {
         this._generateButton.disable(true);
         return;
       }
