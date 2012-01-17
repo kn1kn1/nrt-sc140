@@ -38,6 +38,8 @@
 
     _onCloseWebSocket: function () {
       mediator.appendStdout('WebSocket disconnected');
+      mediator.setScServerStarted(false);
+      mediator.setEditmode();
     },
 
     _onReceiveStdout: function (msg) {
