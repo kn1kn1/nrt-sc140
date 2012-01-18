@@ -39,7 +39,6 @@
     _onCloseWebSocket: function () {
       mediator.appendStdout('WebSocket disconnected');
       mediator.setScServerStarted(false);
-      mediator.setEditmode();
     },
 
     _onReceiveStdout: function (msg) {
@@ -56,20 +55,18 @@
 
     _onValidationError: function (msg) {
       if (msg) {
-        mediator.validationError(msg);
+        mediator.setValidationErrorText(msg);
       } else {
-        mediator.clearValidationError();
+        mediator.clearValidationErrorText();
       }
     },
 
-    _onReceiveTimeRecorded: function (msg) {
-      mediator.setRecordedTimeText(msg);
+    _onReceiveTimeRecorded: function (sec) {
+      mediator.setRecordedTimeText(sec);
     },
 
-    _onFileGenerated: function (msg) {
-      mediator.socketEmit('restartsclang');
-      mediator.showPlayer(msg);
-      mediator.setEditmode();
+    _onFileGenerated: function (filename) {
+      mediator.showPlayer(filename);
     }
   }.setup();
 
@@ -82,7 +79,7 @@
       var thisObj = this;
       textarea.focus();
       textarea.keyup(function () {
-        thisObj._onCodeChanged.apply(thisObj);
+        thisObj._onTextChanged.apply(thisObj);
       });
 
       if (initialCode) {
@@ -97,35 +94,32 @@
 
     setText: function (text) {
       this._textarea.text(text);
-      this._onCodeChanged();
-    },
-
-    _onCodeChanged: function () {
-      var val = this.val();
-      this.setCodeCountText(val.length);
-      mediator.socketEmit('validate', val);
+      this._onTextChanged();
     },
 
     val: function () {
       return $.trim(this._textarea.val());
     },
 
-    setCodeCountText: function (count) {
+    _setCodeCountText: function (count) {
       this._title.text('code (' + count + ' <= 140)');
+    },
+
+    _onTextChanged: function () {
+      var val = this.val();
+      this._setCodeCountText(val.length);
+      mediator.validateCodeText();
     }
   };
 
   generateButton = {
     setup: function () {
+      var thisObj = this;
       this._button = $('#generate');
-      this._button.click(this._onGenerateClick);
+      this._button.click(function () {
+        thisObj._onClick.apply(thisObj);
+      });
       return this;
-    },
-
-    _onGenerateClick: function () {
-      mediator.clearValidationError();
-      mediator.setGeneratemode();
-      mediator.socketEmit('generate', code.val());
     },
 
     disable: function (b) {
@@ -138,6 +132,11 @@
 
     hide: function () {
       this._button.hide.apply(this._button, arguments);
+    },
+
+    _onClick: function () {
+      this.disable(true);
+      mediator.startGenerating();
     }
   };
 
@@ -146,14 +145,9 @@
       var thisObj = this;
       this._button = $('#stop');
       this._button.click(function () {
-        thisObj._onStopClick.apply(thisObj);
+        thisObj._onClick.apply(thisObj);
       });
       return this;
-    },
-
-    _onStopClick: function () {
-      this.disable(true);
-      mediator.socketEmit('stop');
     },
 
     disable: function (b) {
@@ -167,6 +161,11 @@
 
     hide: function () {
       this._button.hide.apply(this._button, arguments);
+    },
+
+    _onClick: function () {
+      this.disable(true);
+      mediator.stopGenerating();
     }
   };
 
@@ -245,6 +244,7 @@
 
   mediator = {
     _scServerStarted: false,
+
     _socket: socket,
     _code: code,
     _generateButton: generateButton,
@@ -260,31 +260,37 @@
       this._stdout.setup();
       this._audioPlayer.setup();
       this._validationErr.setup();
+      this._setEditmode();
     },
 
     setScServerStarted: function (b) {
-      this._scServerStarted = b ? true : false;
-      this.refreshGenerateButtonStatus();
-    },
-
-    socketEmit: function () {
-      this._socket.emit.apply(this._socket, arguments);
+      var started = b ? true : false;
+      this._scServerStarted = started;
+      if (!started) {
+        this._setEditmode();
+      }
+      this._refreshGenerateButtonStatus();
     },
 
     setCodeText: function (text) {
       this._code.setText(text);
     },
 
-    appendStdout: function (text) {
-      this._stdout.appendText(text);
+    validateCodeText: function () {
+      this._socketEmit('validate', this._code.val());
     },
 
-    refreshGenerateButtonStatus: function () {
-      if (this._validationErr.hasErr()) {
-        this._generateButton.disable(true);
-        return;
-      }
-      this._generateButton.disable(this._scServerStarted ? false : true);
+    startGenerating: function () {
+      this._setGeneratemode();
+      this._socketEmit('generate', this._code.val());
+    },
+
+    stopGenerating: function () {
+      this._socketEmit('stop');
+    },
+
+    appendStdout: function (text) {
+      this._stdout.appendText(text);
     },
 
     setRecordedTimeText: function (sec) {
@@ -292,30 +298,44 @@
     },
 
     showPlayer: function (filename) {
+      this._socketEmit('restartsclang');
       this._audioPlayer.showPlayer(filename);
+      this._setEditmode();
     },
 
-    clearValidationError: function () {
-      this._validationErr.clear();
-      this.refreshGenerateButtonStatus();
-    },
-
-    validationError: function (msg) {
-      this.setEditmode();
+    setValidationErrorText: function (msg) {
+      this._setEditmode();
       this._validationErr.show(msg);
-      this.refreshGenerateButtonStatus();
+      this._refreshGenerateButtonStatus();
     },
 
-    setEditmode: function () {
+    clearValidationErrorText: function () {
+      this._validationErr.clear();
+      this._refreshGenerateButtonStatus();
+    },
+
+    _socketEmit: function () {
+      this._socket.emit.apply(this._socket, arguments);
+    },
+
+    _setEditmode: function () {
       this._code.disable(false);
       this._generateButton.show();
       this._stopButton.hide();
     },
 
-    setGeneratemode: function () {
+    _setGeneratemode: function () {
       this._code.disable(true);
       this._generateButton.hide();
       this._stopButton.show();
+    },
+
+    _refreshGenerateButtonStatus: function () {
+      if (this._validationErr.hasErr()) {
+        this._generateButton.disable(true);
+        return;
+      }
+      this._generateButton.disable(this._scServerStarted ? false : true);
     }
   };
 
@@ -324,7 +344,6 @@
       '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
     mediator.setup();
     mediator.setCodeText(INITIAL_CODE);
-    mediator.setEditmode();
   });
 
 }());
