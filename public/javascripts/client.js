@@ -1,4 +1,4 @@
-(function () {
+$(function () {
   "use strict";
   var socket,
     code,
@@ -8,11 +8,6 @@
     audioPlayer,
     validationErr,
     mediator;
-
-  // audio.js
-  audiojs.events.ready(function () {
-    audiojs.createAll();
-  });
 
   socket = {
     setup: function () {
@@ -199,7 +194,7 @@
       var myhtml = '<div>' + sec + ' sec recorded (Max: 30 sec)' + '</div>';
       this._div.html(myhtml);
 
-      this.refreshAudiojsPlayer();
+      this._refreshAudiojsPlayer();
     },
 
     showPlayer: function (filename) {
@@ -212,10 +207,10 @@
         '<a href=\"' + aiff + '\">aiff</a>';
       this._div.html(myhtml);
 
-      this.refreshAudiojsPlayer();
+      this._refreshAudiojsPlayer();
     },
 
-    refreshAudiojsPlayer: function () {
+    _refreshAudiojsPlayer: function () {
       audiojs.createAll();
     }
   };
@@ -339,12 +334,14 @@
     }
   };
 
-  $(document).ready(function () {
-    var INITIAL_CODE =
-      '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
-    mediator.setup();
-    mediator.setCodeText(INITIAL_CODE);
+  // audio.js
+  audiojs.events.ready(function () {
+    audiojs.createAll();
   });
 
-}());
+  var INITIAL_CODE =
+    '{f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps;CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4)}.play';
+  mediator.setup();
+  mediator.setCodeText(INITIAL_CODE);
+});
 
