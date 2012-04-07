@@ -8,7 +8,8 @@ System Requirements
 ### Server Side
   - Linux
     - lowlatency or realtime kernel is required.
-  - SuperCollider 3.4.4
+  - SuperCollider 3.5.x
+    - sclang is installed at '/usr/local/bin/'.
     - jackd is need to be configured properly.
   - node.js
     - express

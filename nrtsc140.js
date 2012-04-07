@@ -2,7 +2,7 @@
  * Constants.
  */
 var MAX_RECORDING_SEC = 30;
-var SC_SEVER_STARTED_MSG = 'notification is on';
+var SC_SEVER_STARTED_MSG = 'Shared memory server interface initialized';
 var SC_SEVER_START_ERR_MSG = 'server failed to start';
 var JACK_DRIVER_IGNORE_MSG = 'JackDriver: max output latency';
 
@@ -111,7 +111,7 @@ NrtSc140.prototype.onSocketDisconnect = function() {
 
 NrtSc140.prototype.createSclang = function() {
   var sclang = 
-    new sc.Sclang('/usr/bin/', this.onSclangStdoutReceived.bind(this));
+    new sc.Sclang('/usr/local/bin/', this.onSclangStdoutReceived.bind(this));
   sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
 
   // FIXME workaround
