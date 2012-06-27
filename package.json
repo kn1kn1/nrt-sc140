@@ -16,7 +16,7 @@
       "node":  ">=0.6.5"
   }
   , "dependencies": {
-      "express": "2.5.2"
+      "express": "2.5.x"
     , "jade": ">= 0.0.1"
     , "socket.io": ">=0.8.7"
     , "sc4node": ">=0.0.7"
