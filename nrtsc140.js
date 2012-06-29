@@ -111,7 +111,7 @@ NrtSc140.prototype.onSocketDisconnect = function() {
 
 NrtSc140.prototype.createSclang = function() {
   var sclang = 
-    new sc.Sclang('/usr/local/bin/', this.onSclangStdoutReceived.bind(this));
+    new sc.start('/usr/local/bin/', this.onSclangStdoutReceived.bind(this));
   sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
 
   // FIXME workaround

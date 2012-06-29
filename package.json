@@ -1,6 +1,6 @@
 {
     "name": "nrt-sc140"
-  , "version": "0.0.7"
+  , "version": "0.0.8"
   , "description": "non-realtime sc140 sound file generator web application"
   , "author": "Kenichi Kanai"
   , "private": false
