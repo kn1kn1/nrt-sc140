@@ -139,9 +139,9 @@ NrtSc140.prototype.restartSclang = function() {
 NrtSc140.prototype.onSclangStdoutReceived = function(data) {
   util.debug('sclang stdout: ' + data);
   var msg = '' + data;
-  if (msg.indexOf(SC_SEVER_STARTED_MSG) != -1) {
+  if (msg.indexOf(SC_SEVER_STARTED_MSG) !== -1) {
     this._socket.emit('scserverstarted');
-  } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) != -1) {
+  } else if (msg.indexOf(SC_SEVER_START_ERR_MSG) !== -1) {
     // FIXME workaround
     // in case starting server failed (receive following stdout).
     //  ERROR:
@@ -151,7 +151,7 @@ NrtSc140.prototype.onSclangStdoutReceived = function(data) {
     this._socket.emit('stdout', msg);
     this.restartSclang(); // restart sclang
     return;
-  } else if (msg.indexOf(JACK_DRIVER_IGNORE_MSG) != -1) {
+  } else if (msg.indexOf(JACK_DRIVER_IGNORE_MSG) !== -1) {
     // FIXME workaround
     // in case other user start sclang
     return; // ignore
