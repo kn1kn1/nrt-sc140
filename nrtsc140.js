@@ -56,7 +56,7 @@ NrtSc140.prototype.onGenerate = function(msg) {
     this._curFile = randomString();
     aiffFile = path.join(this._audioDir, this._curFile + '.aiff');
     util.debug('aiffFile: ' + aiffFile);
-  } while (path.existsSync(aiffFile));
+  } while (fs.existsSync(aiffFile));
   //this._generatedFiles.push(path.join(_audioDir, _curFile + '.*'));
   this._sclang.evaluate(
     's.waitForBoot(s.prepareForRecord(\'' +
@@ -118,7 +118,7 @@ NrtSc140.prototype.createSclang = function() {
   var workaroundTmpFile;
   do {
     workaroundTmpFile = '/tmp/nrt-sc140-' + randomString() + '.aiff';
-  } while (path.existsSync(workaroundTmpFile));
+  } while (fs.existsSync(workaroundTmpFile));
   this._generatedFiles.push(workaroundTmpFile);
   sclang.evaluate(
     's.waitForBoot(s.prepareForRecord(\'' +

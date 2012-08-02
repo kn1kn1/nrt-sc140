@@ -40,7 +40,7 @@ app.listen(3000);
 console.log("Express server listening in %s mode", app.settings.env);
 
 var audioDir = path.join(process.cwd(), 'public', 'audio');
-if (!path.existsSync(audioDir)) {
+if (!fs.existsSync(audioDir)) {
   fs.mkdirSync(audioDir);
 }
 
