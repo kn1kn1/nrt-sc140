@@ -11,6 +11,9 @@ var express = require('express')
   , fs = require('fs')
   , NrtSc140 = require('./nrtsc140').NrtSc140
 
+// For backwards compatibility with node 0.6
+fs.existsSync || (fs.existsSync = path.existsSync);
+
 var app = module.exports = express.createServer();
 
 // Configuration
@@ -40,7 +43,7 @@ app.listen(3000);
 console.log("Express server listening in %s mode", app.settings.env);
 
 var audioDir = path.join(process.cwd(), 'public', 'audio');
-if (!path.existsSync(audioDir)) {
+if (!fs.existsSync(audioDir)) {
   fs.mkdirSync(audioDir);
 }
 

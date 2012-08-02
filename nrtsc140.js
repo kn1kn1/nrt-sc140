@@ -12,9 +12,13 @@ var JACK_DRIVER_IGNORE_MSG = 'JackDriver: max output latency';
 var sio = require('socket.io')
   , sc = require('sc4node')
   , child_process = require('child_process')
+  , fs = require('fs')
   , path = require('path')
   , crypto = require('crypto')
   , util = require('util');
+  
+// For backwards compatibility with node 0.6
+fs.existsSync || (fs.existsSync = path.existsSync);
 
 var NrtSc140 = exports.NrtSc140 = function(socket) {
   this._socket = socket;
@@ -56,7 +60,7 @@ NrtSc140.prototype.onGenerate = function(msg) {
     this._curFile = randomString();
     aiffFile = path.join(this._audioDir, this._curFile + '.aiff');
     util.debug('aiffFile: ' + aiffFile);
-  } while (path.existsSync(aiffFile));
+  } while (fs.existsSync(aiffFile));
   //this._generatedFiles.push(path.join(_audioDir, _curFile + '.*'));
   this._sclang.evaluate(
     's.waitForBoot(s.prepareForRecord(\'' +
@@ -118,7 +122,7 @@ NrtSc140.prototype.createSclang = function() {
   var workaroundTmpFile;
   do {
     workaroundTmpFile = '/tmp/nrt-sc140-' + randomString() + '.aiff';
-  } while (path.existsSync(workaroundTmpFile));
+  } while (fs.existsSync(workaroundTmpFile));
   this._generatedFiles.push(workaroundTmpFile);
   sclang.evaluate(
     's.waitForBoot(s.prepareForRecord(\'' +
