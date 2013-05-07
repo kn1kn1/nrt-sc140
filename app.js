@@ -47,11 +47,21 @@ if (!fs.existsSync(audioDir)) {
   fs.mkdirSync(audioDir);
 }
 
+var sclangPath = '';
+var configFile = './config.json'; 
+if (fs.existsSync(configFile)) {
+  var config = require(configFile);
+  if (config) {
+    sclangPath = config.sclang_path;
+  }
+}
+console.log("path: %s", sclangPath);
+
 // Socket IO
 var io = sio.listen(app);
 io.sockets.on('connection', function(socket) {
   util.debug('connection');
-  var nrtsc140 = new NrtSc140(socket);
+  var nrtsc140 = new NrtSc140(socket, sclangPath);
   nrtsc140.start();
 });
 

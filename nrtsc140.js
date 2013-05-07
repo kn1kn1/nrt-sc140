@@ -20,8 +20,9 @@ var sio = require('socket.io')
 // For backwards compatibility with node 0.6
 fs.existsSync || (fs.existsSync = path.existsSync);
 
-var NrtSc140 = exports.NrtSc140 = function(socket) {
+var NrtSc140 = exports.NrtSc140 = function(socket, sclangPath) {
   this._socket = socket;
+  this._sclangPath = sclangPath;
   this._audioDir = path.join(process.cwd(), 'public', 'audio');
   this._curFile = null;
   this._generatedFiles = [];
@@ -115,7 +116,7 @@ NrtSc140.prototype.onSocketDisconnect = function() {
 
 NrtSc140.prototype.createSclang = function() {
   var sclang = 
-    new sc.start('/usr/local/bin/', this.onSclangStdoutReceived.bind(this));
+    sc.start(this._sclangPath, this.onSclangStdoutReceived.bind(this));
   sclang.evaluate('Server.default = Server.internal;s = Server.default;s.boot;');
 
   // FIXME workaround
