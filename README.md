@@ -8,8 +8,7 @@ System Requirements
 ### Server Side
   - Linux
     - lowlatency or realtime kernel is required.
-  - SuperCollider 3.5.x
-    - sclang is installed at '/usr/local/bin/'.
+  - SuperCollider 3.5.x or greater
     - jackd is need to be configured properly.
   - node.js
     - express
@@ -35,6 +34,11 @@ Usage
 
 ### Client Side
 Access "http:[server address]:3000/" by web browser.
+
+Configuration File
+-------------------
+### config.json
+  - "sclang_path": path to parent folder of sclang. [default: "/usr/local/bin/"]
 
 License
 -------
