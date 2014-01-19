@@ -344,4 +344,3 @@ $(function () {
   mediator.setup();
   mediator.setCodeText(INITIAL_CODE);
 });
-

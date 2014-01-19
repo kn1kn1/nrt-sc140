@@ -1,0 +1,10 @@
+{
+  "browser" : true,
+  "jquery" : true,
+  "indent" : 2,
+  "eqeqeq":true,
+  "devel" : true,
+  "unused" : "vars",
+  "undef" : true,
+  "globals": { "io": false, "audiojs": false }
+}

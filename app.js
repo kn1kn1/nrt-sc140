@@ -3,16 +3,18 @@
  * Module dependencies.
  */
 
-var express = require('express')
-  , sio = require('socket.io')
-  , routes = require('./routes')
-  , path = require('path')
-  , util = require('util')
-  , fs = require('fs')
-  , NrtSc140 = require('./nrtsc140').NrtSc140
+var express = require('express'),
+  sio = require('socket.io'),
+  routes = require('./routes'),
+  path = require('path'),
+  util = require('util'),
+  fs = require('fs'),
+  NrtSc140 = require('./nrtsc140').NrtSc140;
 
 // For backwards compatibility with node 0.6
-fs.existsSync || (fs.existsSync = path.existsSync);
+if (!fs.existsSync) {
+  fs.existsSync = path.existsSync;
+}
 
 var app = module.exports = express.createServer();
 

@@ -9,16 +9,17 @@ var JACK_DRIVER_IGNORE_MSG = 'JackDriver: max output latency';
 /**
  * Module dependencies.
  */
-var sio = require('socket.io')
-  , sc = require('sc4node')
-  , child_process = require('child_process')
-  , fs = require('fs')
-  , path = require('path')
-  , crypto = require('crypto')
-  , util = require('util');
+var sc = require('sc4node'),
+  child_process = require('child_process'),
+  fs = require('fs'),
+  path = require('path'),
+  crypto = require('crypto'),
+  util = require('util');
   
 // For backwards compatibility with node 0.6
-fs.existsSync || (fs.existsSync = path.existsSync);
+if (!fs.existsSync) {
+  fs.existsSync = path.existsSync;
+}
 
 var NrtSc140 = exports.NrtSc140 = function(socket, sclangPath) {
   this._socket = socket;
@@ -173,7 +174,7 @@ NrtSc140.prototype.validateScCode = function(msg) {
     this._socket.emit('validationerror', 'code can not be over 140.');
     return false;
   }
-  if (msg.indexOf('unixCmd') != -1) {
+  if (msg.indexOf('unixCmd') !== -1) {
     this._socket.emit('validationerror', '\'unixCmd\' can not be executed.');
     return false;
   }
@@ -223,4 +224,3 @@ function rmFile(file) {
     }
   });
 }
-

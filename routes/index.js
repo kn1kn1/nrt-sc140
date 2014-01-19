@@ -4,5 +4,5 @@
  */
 
 exports.index = function(req, res){
-  res.render('index', { title: 'NRT-SC140' })
+  res.render('index', { title: 'NRT-SC140' });
 };
