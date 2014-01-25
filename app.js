@@ -3,46 +3,39 @@
  * Module dependencies.
  */
 
-var express = require('express'),
-  sio = require('socket.io'),
-  routes = require('./routes'),
-  path = require('path'),
-  util = require('util'),
-  fs = require('fs'),
-  NrtSc140 = require('./nrtsc140').NrtSc140;
+var express = require('express');
+var routes = require('./routes');
+var http = require('http');
+var path = require('path');
+var sio = require('socket.io');
+var path = require('path');
+var util = require('util');
+var fs = require('fs');
+var NrtSc140 = require('./nrtsc140').NrtSc140;
 
 // For backwards compatibility with node 0.6
-if (!fs.existsSync) {
-  fs.existsSync = path.existsSync;
+fs.existsSync || (fs.existsSync = path.existsSync);
+
+var app = express();
+
+// all environments
+app.set('port', process.env.PORT || 3000);
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+app.use(express.favicon());
+app.use(express.logger('dev'));
+app.use(express.json());
+app.use(express.urlencoded());
+app.use(express.methodOverride());
+app.use(app.router);
+app.use(express.static(path.join(__dirname, 'public')));
+
+// development only
+if ('development' === app.get('env')) {
+  app.use(express.errorHandler());
 }
 
-var app = module.exports = express.createServer();
-
-// Configuration
-
-app.configure(function(){
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'jade');
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
-});
-
-app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
-});
-
-app.configure('production', function(){
-  app.use(express.errorHandler()); 
-});
-
-// Routes
-
 app.get('/', routes.index);
-
-app.listen(3000);
-console.log("Express server listening in %s mode", app.settings.env);
 
 var audioDir = path.join(process.cwd(), 'public', 'audio');
 if (!fs.existsSync(audioDir)) {
@@ -59,11 +52,13 @@ if (fs.existsSync(configFile)) {
 }
 console.log("path: %s", sclangPath);
 
-// Socket IO
-var io = sio.listen(app);
-io.sockets.on('connection', function(socket) {
-  util.debug('connection');
-  var nrtsc140 = new NrtSc140(socket, sclangPath);
-  nrtsc140.start();
+var server = http.createServer(app).listen(app.get('port'), function(){
+  console.log("Express server listening on port " + app.get('port'));
 });
 
+var socket = sio.listen(server);
+socket.on('connection', function(sock) {
+  util.debug('connection');
+  var nrtsc140 = new NrtSc140(sock, sclangPath);
+  nrtsc140.start();
+});

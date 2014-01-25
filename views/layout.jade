@@ -1,4 +1,4 @@
-document
+doctype html
 html
   head
     title= title
@@ -7,4 +7,5 @@ html
     script(type='text/javascript', src='/socket.io/socket.io.js')
     script(type='text/javascript', src='/javascripts/audiojs/audio.js')
     script(type='text/javascript', src='/javascripts/client.js')
-  body!= body
+  body
+    block content

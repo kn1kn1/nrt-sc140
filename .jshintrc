@@ -4,6 +4,7 @@
   "maxlen" : 120,
   "eqeqeq":true,
   "devel" : true,
+  "expr" : true,
   "unused" : "vars",
   "undef" : true
 }
