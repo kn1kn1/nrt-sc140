@@ -1,6 +1,7 @@
 nrt-sc140
 =========
 [![Build Status](https://travis-ci.org/kn1kn1/nrt-sc140.png?branch=master)](https://travis-ci.org/kn1kn1/nrt-sc140)
+[![NPM version](https://badge.fury.io/js/nrt-sc140.png)](http://badge.fury.io/js/nrt-sc140)
 
 non-realtime sc140 sound file generatior web application
 
